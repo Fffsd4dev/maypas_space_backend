@@ -1,0 +1,262 @@
+[33mcommit c596c29b3d6c13dbb4639da8734669643f5728dc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Merge: a2aa5e1 e84847a
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Fri Sep 19 05:32:31 2025 +0100
+
+    Merge branch 'main' of https://github.com/Fffsd4dev/maypas_estate_manager_backend
+
+[33mcommit e84847a6dc394aaf7c56c7e2b59eed71411ef9f1[m[33m ([m[1;31mbackup/main[m[33m)[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Fri Sep 19 05:19:36 2025 +0100
+
+    Added amaenities to apartment controller
+
+[33mcommit f6305f25d941e5649292be85037c84d4671391a4[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Thu Sep 18 14:44:32 2025 +0100
+
+    Correction
+
+[33mcommit a2aa5e1c603a7e5a718ad4ce175f417ac367e586[m[33m ([m[1;31morigin/main[m[33m)[m
+Author: Olekamma Kingsley <olekamma.uche@gmail.com>
+Date:   Thu Sep 18 08:15:42 2025 -0400
+
+    Added updates for Amenity
+
+[33mcommit 8491ba1f7226a66e785b0e4b3b6b3ea95a5fa241[m
+Merge: eb9cb10 691f6a0
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Thu Sep 18 12:16:33 2025 +0100
+
+    Merge branch 'main' of https://github.com/emekaffsd/maypas_estate
+
+[33mcommit eb9cb10fc70124d79e9cd0f9bd517930b44abe33[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Thu Sep 18 12:15:55 2025 +0100
+
+    correcting with remote
+
+[33mcommit 691f6a0b2869e935e27cd9ad35c9fd95610e12a5[m
+Author: Olekamma Kingsley <olekamma.uche@gmail.com>
+Date:   Thu Sep 18 07:13:39 2025 -0400
+
+    Added landlord details
+
+[33mcommit a77e780cfa262eeb20694169948b4e4338c80e6e[m
+Author: Olekamma Kingsley <olekamma.uche@gmail.com>
+Date:   Thu Sep 18 07:03:23 2025 -0400
+
+    Updated apartment controller
+
+[33mcommit 7996f61b6b0ba1a8f866f0ec3dc86b3511e43a73[m
+Author: Olekamma Kingsley <olekamma.uche@gmail.com>
+Date:   Thu Sep 18 06:54:51 2025 -0400
+
+    Updated apartment controller
+
+[33mcommit a8e977a309f3212795fede98be72c5cb792c1dd0[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Thu Sep 18 11:47:27 2025 +0100
+
+    Added delete apartment unit
+
+[33mcommit 38fe7c8450d2a1c74198d6072c7ba0c70cb78914[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Thu Sep 18 11:47:02 2025 +0100
+
+    Added delete apartment unit
+
+[33mcommit 831b706dafd19082451ab3a48fc11d4226267209[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Wed Sep 17 15:48:11 2025 +0100
+
+    added correction
+
+[33mcommit a14bd38c9c6af7f3b10bc2f22db86d3710f8213b[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Wed Sep 17 14:03:43 2025 +0100
+
+    Completed amenities module and apartment unit update
+
+[33mcommit 2c1ab18b99546e9a0847d3bd8868e5338c59db0d[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Wed Sep 17 12:52:27 2025 +0100
+
+    Completed amenities module and apartment unit update
+
+[33mcommit 62d9edb4c4b3438e6e31934a1e7f499b69697c82[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Wed Sep 17 10:42:44 2025 +0100
+
+    made corrections on apartment
+
+[33mcommit 1e447ed99762f6f75738c64c5f0868ce85696b28[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Tue Sep 16 12:29:35 2025 +0100
+
+    Adjusted apartment module to include name
+
+[33mcommit c63f7ceefc2453d2cc1ab21d3f97fa06bb87ea65[m
+Merge: 08996da 690eb68
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Fri Sep 12 12:13:58 2025 +0100
+
+    Merge branch 'emeka' of https://github.com/Fffsd4dev/maypas_estate_manager_backend
+
+[33mcommit 08996dae23563442b6689b7a009cba7c6eb8a984[m
+Merge: 6ae7e9a 6ccf34d
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Fri Sep 12 12:13:01 2025 +0100
+
+    merging for update
+
+[33mcommit 690eb68b27dc6131120dce1c449af4ee917674eb[m[33m ([m[1;31mbackup/emeka[m[33m)[m
+Author: Code-Lucius <nemidav@gmail.com>
+Date:   Thu Sep 11 04:32:24 2025 +0100
+
+    11/09/2025 04:32am
+
+[33mcommit 6ccf34d414dd32a4753ca2df9537510950da6ab0[m
+Author: Code-Lucius <nemidav@gmail.com>
+Date:   Wed Sep 10 12:54:33 2025 +0100
+
+    Overwrite remote branch with local changes
+
+[33mcommit 6ae7e9a515270f6a663d380c3849aa0ee915a7b6[m
+Merge: 6b64f3f 6de25ed
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Wed Sep 10 12:02:51 2025 +0100
+
+    Merge branch 'main' of https://github.com/emekaffsd/maypas_estate
+
+[33mcommit 6de25ed84204ab8235ea8b91c4f4ad3bdc6a32bb[m
+Author: Olekamma Kingsley <olekamma.uche@gmail.com>
+Date:   Wed Sep 10 07:00:45 2025 -0400
+
+    updated Ensure Landlord file to make it compatible in all environment
+
+[33mcommit 6b64f3f734c2e2d1af75437951ae3dac2a2f3511[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Wed Sep 10 11:38:13 2025 +0100
+
+    merging or update
+
+[33mcommit e8be44a559ab3fd5ab2f5f58839271844057b1f3[m
+Author: Code-Lucius <nemidav@gmail.com>
+Date:   Mon Sep 8 16:34:00 2025 +0100
+
+    monday
+
+[33mcommit 16b93c9a7cf2c75a979af7f1302f66136619e290[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Sun Sep 7 19:03:12 2025 +0100
+
+    Corrected the estatemanager login glitch
+
+[33mcommit c00044ba49c211aefeaadef22d2889922bccd2d0[m
+Author: Code-Lucius <nemidav@gmail.com>
+Date:   Sat Sep 6 19:03:03 2025 +0100
+
+    emeka
+
+[33mcommit 0b9d620f92dd4c396d39b92a028d36f821c4d356[m
+Merge: e0e2cf7 00d4338
+Author: Code-Lucius <nemidav@gmail.com>
+Date:   Sat Sep 6 18:37:15 2025 +0100
+
+    Merge branch 'main' of https://github.com/Fffsd4dev/maypas_estate_manager_backend
+
+[33mcommit e0e2cf737f1a00ff45bbf9c877f5222d96ebdf25[m
+Author: Code-Lucius <nemidav@gmail.com>
+Date:   Sat Sep 6 18:36:52 2025 +0100
+
+    Changes to landlord
+
+[33mcommit 00d43380c481478b2c3cf46197b4653b7e7c6ef0[m
+Merge: f91a509 23ffbee
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Wed Sep 3 13:02:42 2025 +0100
+
+    Merged with emeka's branch
+
+[33mcommit f91a509dd4632dab12f89ec76afc3b07c4b13f44[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Wed Sep 3 12:21:28 2025 +0100
+
+    Removed a redundant code
+
+[33mcommit e34384ba7b818b70664aa4e11eafe652e32b3b18[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Wed Sep 3 12:18:41 2025 +0100
+
+    Removed a redundant code
+
+[33mcommit 23ffbee9cc5eef7b71f98c0e694b5ea1d718194c[m
+Author: Code-Lucius <nemidav@gmail.com>
+Date:   Fri Aug 29 16:46:05 2025 +0100
+
+    29th August
+
+[33mcommit 871a60a3a89cc8e8fac1531d53bb2c7b30526d1d[m
+Author: Code-Lucius <nemidav@gmail.com>
+Date:   Thu Aug 28 12:56:20 2025 +0100
+
+    first commit
+
+[33mcommit 730df3f81831679c5153d9b145b1562c5d398bbb[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Mon Aug 25 13:48:43 2025 +0100
+
+    apartments
+
+[33mcommit 1ed7b2d1eb1fc12d6683781f41c2a1238cab4cd0[m[33m ([m[1;31morigin/emeka[m[33m)[m
+Author: emekffsd <nemidav@gmail.com>
+Date:   Mon Aug 25 12:04:12 2025 +0100
+
+    Updated Http methods
+
+[33mcommit dab67b6430ffc559ac826a2d984e769b00ac403c[m
+Merge: 9114cd2 197da2b
+Author: emekffsd <nemidav@gmail.com>
+Date:   Wed Aug 20 16:19:11 2025 +0100
+
+    Merge remote-tracking branch 'origin/main' into emeka
+
+[33mcommit 9114cd25d56ee629e10336d129651bfa30cb65d4[m
+Author: emekffsd <nemidav@gmail.com>
+Date:   Wed Aug 20 16:06:13 2025 +0100
+
+    20th August 2025
+
+[33mcommit 197da2b7a71d573ed8b62cb3af6847461be2ad50[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Wed Aug 20 15:37:27 2025 +0100
+
+    Integrated apartment and apartment category
+
+[33mcommit 275d52b4cc1e4cfb4c55ff639fa4e012b134f368[m
+Merge: 872a58b b48302f
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Tue Aug 19 14:45:57 2025 +0100
+
+    Merge branch 'main' of https://github.com/emekaffsd/maypas_estate
+
+[33mcommit 872a58bb8cdb17b6aa106a5b36b0c95a4296ba23[m
+Author: Elitebook <olekamma.uche@gmail.com>
+Date:   Tue Aug 19 14:45:50 2025 +0100
+
+    saved
+
+[33mcommit b48302f9493b79d66022a268ded8d72406f7ffe5[m
+Author: emekaffsd <n.okoronkwo@ffsdgroup.com>
+Date:   Mon Aug 18 15:02:51 2025 +0100
+
+    Update AdminSeeder.php
+
+[33mcommit 51879ba96b8d7b2c0ef8393a2bbab44412274a8d[m
+Author: emekffsd <n.okoronkwo@ffsdgroup.com>
+Date:   Fri Aug 15 13:20:35 2025 +0100
+
+            modified:   app/Http/Controllers/Api/V1/ApartmentController.php
+            renamed:    database/migrations/2025_08_12_132345_create_apartment_categories_table.php -> database/migrations/2025_08_11_132345_create_apartment_categories_table.php
+            modified:   database/migrations
