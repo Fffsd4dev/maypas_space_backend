@@ -60,11 +60,13 @@ $displayTz  = $this->getLocationTimezone($locationId);
         if (!$tenant||!$tenant->space) {
             return response()->json(['message' => 'Spot not found for this space'], 404);
         }
-        
+      if (isset($validated['number_weeks']) && $validated['number_weeks'] == 1) {
+    $validated['number_weeks'] = 0;
+}
 $space_category_time = $tenant->space->category->booking_type;
  $chosenDays = $this->normalizeChosenDays($validated['chosen_days'], $displayTz);
  
-$expiryDay = $this->calculateExpiryDate($validated['type'], $chosenDays, $validated, $displayTz);
+$expiryDay = $this->calculateExpiryDate($validated['type'], $chosenDays, $validated, $displayTz,$space_category_time);
 
         // Early validation
         if ($validated['type'] === 'one-off' && ($validated['number_weeks'] || $validated['number_months'])) {
@@ -75,7 +77,7 @@ $expiryDay = $this->calculateExpiryDate($validated['type'], $chosenDays, $valida
             return response()->json(['message' => 'Recurrent booking must have weeks or months specified'], 422);
         }
 
-        
+      
 
 // proceed with $tenant if needed...
 
@@ -164,6 +166,7 @@ $expiryDay = $this->calculateExpiryDate($validated['type'], $chosenDays, $valida
 
         
         $amount_booked = $this->calculateBookingAmount($validated, $spot_data, $totalDuration);
+        
     
         $amount = $amount_booked;
 
@@ -180,7 +183,8 @@ foreach (TaxModel::where('tenant_id', $tenant->tenant_id)->get() as $tax) {
         'fee'  => $taxAmount,
     ];
 }
-        
+     
+     
         $charge_data = []; // initialize before loop
 foreach (Charge::where('tenant_id', $tenant->tenant_id)->where('space_id', $spot_data->space_id)->get() as $charge) {
     if ($charge->is_fixed) {
@@ -363,21 +367,67 @@ private function validateBookingRequest(Request $request)
         'type' => 'required|in:one-off,recurrent',
         'number_weeks' => 'required|numeric|min:0|max:3',
         'number_months' => 'required|numeric|min:0|max:12',
-        'book_spot_id'=>'nullable|numeric|min:0',
+        'book_spot_id' => 'nullable|numeric|min:0',
+
+        'chosen_days' => 'required|array|min:1',
+
         'chosen_days.*.day' => 'required|string|in:sunday,monday,tuesday,wednesday,thursday,friday,saturday',
+
         'chosen_days.*.start_time' => 'required|date_format:Y-m-d H:i:s|after_or_equal:now',
-        'chosen_days.*.end_time' => 'required|date_format:Y-m-d H:i:s|after:chosen_days.*.start_time',
+
+        'chosen_days.*.end_time' => 'required|date_format:Y-m-d H:i:s',
     ]);
+
+    $validator->after(function ($validator) use ($request) {
+
+        foreach ($request->input('chosen_days', []) as $index => $chosenDay) {
+
+            $start = Carbon::parse($chosenDay['start_time']);
+            $end   = Carbon::parse($chosenDay['end_time']);
+
+            // Start and end must be on the same date
+            if (!$start->isSameDay($end)) {
+                $validator->errors()->add(
+                    "chosen_days.$index.end_time",
+                    'Start time and end time must be on the same day.'
+                );
+            }
+
+            // End must be after start
+            if ($end->lessThanOrEqualTo($start)) {
+                $validator->errors()->add(
+                    "chosen_days.$index.end_time",
+                    'End time must be later than the start time.'
+                );
+            }
+
+            // Selected weekday must match the dates
+            $selectedDay = strtolower($chosenDay['day']);
+
+            if (strtolower($start->format('l')) !== $selectedDay) {
+                $validator->errors()->add(
+                    "chosen_days.$index.day",
+                    'The selected day does not match the start time.'
+                );
+            }
+
+            if (strtolower($end->format('l')) !== $selectedDay) {
+                $validator->errors()->add(
+                    "chosen_days.$index.day",
+                    'The selected day does not match the end time.'
+                );
+            }
+        }
+    });
 
     if ($validator->fails()) {
         return [
-            'error' => $validator->errors()->first() // return first error message
+            'error' => $validator->errors()->first()
         ];
     }
 
     return $validator->validated();
 }
-
 
 private function getTenantFromSpot($spotId)
 {
@@ -399,7 +449,13 @@ private function normalizeChosenDays(array $days, string $timezone): Collection
 
 
 
-private function calculateExpiryDate($type = null, Collection $chosenDays, array $validated, string $displayTz ): array
+private function calculateExpiryDate(
+    $type = null,
+    Collection $chosenDays,
+    array $validated,
+    string $displayTz,
+    string $space_category_time
+):array
 {
     if ($chosenDays->isEmpty()) {
         return [];
@@ -428,16 +484,24 @@ private function calculateExpiryDate($type = null, Collection $chosenDays, array
     // ─────────────────────────────────────────────
     $weeksToAdd  = max((int) ($validated['number_weeks']  ?? 0), 0);
     $monthsToAdd = max((int) ($validated['number_months'] ?? 0), 0);
+    
 
-    // If nothing provided, default to 1 week cycle
-    if ($weeksToAdd === 0 && $monthsToAdd === 0) {
-        $weeksToAdd = 1;
-    }
+   // Default to one week only for recurring bookings when nothing was supplied.
+if (
+    $type === 'recurrent' &&
+    $weeksToAdd === 0 &&
+    $monthsToAdd === 0
+) {
+    $weeksToAdd = 1;
+}
 
-    // ─────────────────────────────────────────────
-    // 4. Totals
-    // ─────────────────────────────────────────────
-    $effectiveWeeks = $monthsToAdd > 0 ? $monthsToAdd * 4 : $weeksToAdd;
+// Months and weeks are cumulative.
+$effectiveWeeks = ($monthsToAdd * 4) + $weeksToAdd;
+
+// One-off bookings represent only a single cycle.
+if ($type === 'one-off') {
+    $effectiveWeeks = 1;
+}
 
     $totalDays  = $daysPerCycle * $effectiveWeeks;
     $totalHours = $hoursPerCycle * $effectiveWeeks;
@@ -448,14 +512,122 @@ private function calculateExpiryDate($type = null, Collection $chosenDays, array
     $endDate = $baseDate->copy()->setTimezone($displayTz);
     // $endDateInDisplayTz = $endDate->copy()
 
-    if ($weeksToAdd > 0) {
-        $endDate->addWeeks($weeksToAdd); // ✅ fixed
+  switch ($space_category_time) {
+      
+      
+     case 'hourly':
+
+    if ($type === 'recurrent') {
+
+        if ($monthsToAdd > 0) {
+            $endDate->addMonths($monthsToAdd);
+        }
+
+        if ($weeksToAdd > 0) {
+            $endDate->addWeeks($weeksToAdd);
+        }
     }
 
-    if ($monthsToAdd > 0) {
-        $endDate->addMonths($monthsToAdd);
+    break;
+
+  case 'daily':
+
+    if ($type === 'recurrent') {
+
+        $daysToAdd = max(
+            (int) ($validated['number_days'] ?? 0),
+            0
+        );
+
+        if ($monthsToAdd > 0) {
+            $endDate->addMonths($monthsToAdd);
+        }
+
+        if ($weeksToAdd > 0) {
+            $endDate->addWeeks($weeksToAdd);
+        }
+
+        if ($daysToAdd > 0) {
+            $endDate->addDays($daysToAdd);
+        }
+
+    } else {
+
+        $daysToAdd = max(
+            (int) ($validated['number_days'] ?? 1),
+            1
+        );
+
+        $endDate->addDays($daysToAdd);
     }
 
+    $endDate->subDay();
+
+    break;
+
+  case 'weekly':
+
+    if ($type === 'recurrent') {
+
+        if ($monthsToAdd > 0) {
+            $endDate->addMonths($monthsToAdd);
+        }
+
+        if ($weeksToAdd > 0) {
+            $endDate->addWeeks($weeksToAdd);
+        }
+
+    } else {
+
+        $weeks = max(
+            (int) ($validated['number_weeks'] ?? 1),
+            1
+        );
+
+        $endDate->addWeeks($weeks);
+    }
+
+    break;
+
+        break;
+
+   case 'monthly':
+
+    if ($type === 'recurrent') {
+
+        if ($monthsToAdd > 0) {
+            $endDate->addMonths($monthsToAdd);
+        }
+
+        if ($weeksToAdd > 0) {
+            $endDate->addWeeks($weeksToAdd);
+        }
+
+    } else {
+
+        // One-off monthly booking
+        $months = max(
+            (int) ($validated['number_months'] ?? 1),
+            1
+        );
+
+        $endDate->addMonths($months);
+    }
+
+    $endDate->subDay();
+
+
+        break;
+
+    default:
+
+        $weeksToAdd = max(
+            (int) ($validated['number_weeks'] ?? 1),
+            1
+        );
+
+        $endDate->addWeeks($weeksToAdd);
+}
     // ─────────────────────────────────────────────
     // 6. Return
     // ─────────────────────────────────────────────
@@ -463,7 +635,7 @@ private function calculateExpiryDate($type = null, Collection $chosenDays, array
         'expiry_date'     => $endDate, // ✅ UTC
         'hours_per_cycle' => $hoursPerCycle,
         'days_per_cycle'  => $daysPerCycle,
-        'number_weeks'    => $weeksToAdd,
+        'number_weeks' => $weeksToAdd,
         'number_months'   => $monthsToAdd,
         'total_days'      => $totalDays,
         'total_hours'     => $totalHours,
@@ -960,6 +1132,10 @@ public function getBookings(Request $request)
 
         case 'all':
             // includes canceled too (because of withTrashed)
+         $start = Carbon::parse($validated['start_time']);
+            $end   = Carbon::parse($validated['end_time']);
+
+    $query->whereBetween('created_at', [$start, $end]);
             break;
     }
 
