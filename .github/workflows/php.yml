@@ -1,0 +1,39 @@
+name: Laravel Deploy to Live Server
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 21098
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            pwd 
+            ls -la
+            git fetch origin
+            git reset --hard origin/main
+
+            /opt/alt/php84/usr/bin/composer install --no-dev --optimize-autoloader --no-interaction
+            cd /home/maypevcf/web.maypaspace.com/maypassworkspace
+            php artisan optimize:clear
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            chmod -R 775 storage bootstrap/cache
+
+            echo "Deployment completed successfully"
