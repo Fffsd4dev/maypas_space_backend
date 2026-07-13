@@ -62,6 +62,10 @@ public function spot()
         return $this->belongsTo(InvoiceModel::class, 'invoice_ref', 'invoice_ref');
     }
 
+    public function paymentlisting(){
+        return $this->hasMany(PaymentListing::class,'book_spot_id', 'id');
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new TenantScope());
