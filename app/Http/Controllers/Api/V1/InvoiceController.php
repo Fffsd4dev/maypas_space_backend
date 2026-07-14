@@ -9,6 +9,7 @@ use App\Models\InvoiceModel;
 use App\Models\TaxModel;
 use App\Models\User;
 use App\Models\Spot;
+use App\Models\BookSpot;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\RefundEmail;
@@ -168,8 +169,8 @@ $payment_listing = $paymentListings
         'name'            => $entry->payment_name,
         'fee'             => $entry->fee,
         'payment_list_id' => $entry->id,
-       'payment_status' => $entry->payment_status === 'Refunded'
-    ? 'Refunded'
+       'payment_status' => $entry->payment_status === 'refunded'
+    ? 'refunded'
     : '',
     ])
     ->all();
@@ -530,6 +531,7 @@ public function refundInvoice(Request $request, $slug)
 
     $refundAmount = (float) $payments->sum('fee');
 
+
     $payment = $payments->first();
 
     $refundInvoice = null;
@@ -567,6 +569,9 @@ public function refundInvoice(Request $request, $slug)
         ]);
     });
 
+    Bookspot::where('id', $invoice->book_spot_id)->update([
+        'fee'=>$newAmount
+    ]);
     $invoice_data = array_merge(
         $refundInvoice->toArray(),
         [
