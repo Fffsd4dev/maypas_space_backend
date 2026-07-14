@@ -44,7 +44,7 @@ class InvoiceController extends Controller
     $validated['created_at'] = now();
     $validated['updated_at'] = now();
 
-    $invoice = InvoiceModel::insert($validated);
+    $invoice = InvoiceModel::create($validated);
 
     if (!$invoice) {
         return ['error' => 'Invoice creation failed'];

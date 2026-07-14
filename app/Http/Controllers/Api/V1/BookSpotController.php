@@ -56,7 +56,6 @@ $tenant = $this->getTenantFromSpot($validated['spot_id']);
 $locationId = $tenant->location_id;  // adjust path if needed
 $displayTz  = $this->getLocationTimezone($locationId);
     
-    
         if (!$tenant||!$tenant->space) {
             return response()->json(['message' => 'Spot not found for this space'], 404);
         }
@@ -98,8 +97,13 @@ $expiryDay = $this->calculateExpiryDate($validated['type'], $chosenDays, $valida
         
        $schedule = $this->generateSchedule($chosenDays->toArray(), Carbon::parse($expiryDay['expiry_date']));
        
-        
-         
+           $spot_data = Spot::where('spots.id', $validated['spot_id'])
+    ->join('spaces', 'spaces.id', '=', 'spots.space_id')->join('categories', 'spaces.space_category_id', 'categories.id')
+    ->select('spots.*', 'spaces.space_name as space_name', 'spaces.space_category_id', 'spaces.space_fee', 'spaces.min_space_discount_time', 
+    'spaces.space_discount', 'categories.id as space_category_id', 'categories.booking_type as booking_type', 'categories.min_duration as category_min_duration') // adjust as needed
+    ->first(); 
+    
+      
 
         $tenantAvailability = $this->getTenantAvailability($slug, $chosenDays);
         
@@ -157,11 +161,7 @@ $expiryDay = $this->calculateExpiryDate($validated['type'], $chosenDays, $valida
         $totalDuration = $duration_data['total_duration'];
 
         
-        $spot_data = Spot::where('spots.id', $validated['spot_id'])
-    ->join('spaces', 'spaces.id', '=', 'spots.space_id')->join('categories', 'spaces.space_category_id', 'categories.id')
-    ->select('spots.*', 'spaces.space_name as space_name', 'spaces.space_category_id', 'spaces.space_fee', 'spaces.min_space_discount_time', 
-    'spaces.space_discount', 'categories.id as space_category_id', 'categories.booking_type as booking_type', 'categories.min_duration as category_min_duration') // adjust as needed
-    ->first(); 
+
     $spot_data->expiry_day = $expiryDay;
 
         
@@ -173,6 +173,7 @@ $expiryDay = $this->calculateExpiryDate($validated['type'], $chosenDays, $valida
         // Apply Taxes
         $tax_data = [];
         $payment_listing = [];
+        //add space payment to the array
         
 foreach (TaxModel::where('tenant_id', $tenant->tenant_id)->get() as $tax) {
     $taxAmount = $amount_booked * ($tax->percentage / 100);
@@ -199,6 +200,11 @@ foreach (Charge::where('tenant_id', $tenant->tenant_id)->where('space_id', $spot
         'fee'  => $charge_amount,
     ];
 }
+$payment_listing[] =[
+    'name'=>'Space Fee',
+    'fee'=>(float)$spot_data->space_fee,
+
+];
 
         $reference = (new BookedRef)->generateRef($slug);
 
