@@ -100,7 +100,7 @@ $expiryDay = $this->calculateExpiryDate($validated['type'], $chosenDays, $valida
            $spot_data = Spot::where('spots.id', $validated['spot_id'])
     ->join('spaces', 'spaces.id', '=', 'spots.space_id')->join('categories', 'spaces.space_category_id', 'categories.id')
     ->select('spots.*', 'spaces.space_name as space_name', 'spaces.space_category_id', 'spaces.space_fee', 'spaces.min_space_discount_time', 
-    'spaces.space_discount', 'categories.id as space_category_id', 'categories.booking_type as booking_type', 'categories.min_duration as category_min_duration') // adjust as needed
+    'spaces.space_discount', 'categories.id as space_category_id', 'categories.booking_type as booking_type', 'categories.min_duration as category_min_duration', 'categories.category as space_category') // adjust as needed
     ->first(); 
     
       
@@ -286,6 +286,10 @@ ReservedSpots::insert($reservedSpotsData);
         $payment_rows =collect($payment_listing)->map(fn($item) => [
             'payment_name'       => $item['name'],
             'fee'                => $item['fee'],
+            'booking_type'      =>$spot_data->booking_type,
+            'space_category'    =>$spot_data->space_category,
+            'space_fee'         =>$spot_data->space_fee,
+            'space_name'        =>$spot_data->space_name,
             'book_spot_id'       => $bookSpot->id,
             'tenant_id'          => $tenant->tenant_id,
             'payment_by_user_id' => $validated['user_id'],
