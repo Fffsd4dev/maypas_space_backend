@@ -379,7 +379,7 @@ private function getTenantFromSpot($spotId)
 public function getRefundedInvoices(Request $request, $slug)
 {
    
-    $request->user()->tenant_id;
+    $tenantId =$request->user()->tenant_id;
 
     $invoices = InvoiceModel::with([
         'bookSpot:id,spot_id,user_id,start_time,invoice_ref,fee',
