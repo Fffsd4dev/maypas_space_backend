@@ -71,7 +71,7 @@ $invoices = InvoiceModel::with([
     'user:id,first_name,last_name',
     'spacePayment:invoice_ref,amount,payment_status,created_at'
 ])
-->where('tenant_id', $tenant_id)
+->where('tenant_id', $tenant_id)->where('status', '!=', 'refunded')
 ->whereNotNull('invoice_ref')
 ->select('id','book_spot_id', 'user_id', 'invoice_ref', 'tenant_id')
 ->get();
@@ -99,6 +99,7 @@ public function show(Request $request, $slug, $id)
 {
     
     $tenant_id = $request->user()->tenant_id;
+    
     $tenant = Tenant::where('id', $tenant_id)->first();
 
     if (!$tenant) {
@@ -125,7 +126,6 @@ public function show(Request $request, $slug, $id)
         'spots.location_id',
         'spots.floor_id',
         'spots.tenant_id',
-        'spaces.id as space_id',
         'floors.name as floor_name',
         'locations.id as location_id',
         'locations.name as location_name'
@@ -376,8 +376,40 @@ private function getTenantFromSpot($spotId)
         'location:id,name,address',
     ])->find($spotId); 
 }
+public function getRefundedInvoices(Request $request, $slug)
+{
+   
+    $request->user()->tenant_id;
 
+    $invoices = InvoiceModel::with([
+        'bookSpot:id,spot_id,user_id,start_time,invoice_ref,fee',
+        'bookSpot.spot:id,location_id',
+        'user:id,first_name,last_name',
+        'paymentData' // Eager load the relationship directly
+    ])
+    ->where('tenant_id', $tenantId)
+    ->where('status', 'refunded')
+    ->whereNotNull('invoice_ref')
+    ->select('id', 'book_spot_id', 'user_id', 'invoice_ref', 'tenant_id', 'created_at')
+    ->orderBy('created_at', 'desc')
+    ->get();
 
+    if ($invoices->isEmpty()) {
+        return response()->json(['success' => false, 'message' => 'No invoices found'], 404);
+    }
+
+    // Append location_id attribute
+    $invoices->each(function ($invoice) {
+       // If using an accessor in the model
+        // Or if you prefer the manual assignment:
+        $invoice->location_id = $invoice->bookSpot->spot->location_id ?? 'n/a';
+    });
+
+    return response()->json([
+        'success' => true,
+        'invoices' => $invoices,
+    ]);
+}
 private function offsetToTimezone(string $offset): string
 {
     // Normalize input, ensure it is in ±HH:MM format
@@ -592,154 +624,6 @@ public function refundInvoice(Request $request, $slug)
         'refund_invoice_ref' => $refundInvoice->invoice_ref,
     ], 200);
 }
-// public function refundInvoice(Request $request, $slug)
-// {
-//     $user = $request->user();
-//     $tenantId = $user->tenant_id;
-
-//     // Only tenant owner can refund
-//     if ((int) $user->user_type_id !== 1) {
-//         return response()->json([
-//             'error' => 'Unauthorized'
-//         ], 403);
-//     }
-
-//     $validator = Validator::make($request->all(), [
-//         'invoice_ref' => 'required|exists:invoices,invoice_ref',
-//         'payment_data' => 'required|array|min:1',
-//         'payment_data.*.payment_list_id' => 'required|integer|exists:payment_listings,id',
-//     ]);
-
-//     if ($validator->fails()) {
-//         return response()->json([
-//             'error' => $validator->errors()
-//         ], 422);
-//     }
-
-//     $invoice = InvoiceModel::where('invoice_ref', $request->invoice_ref)
-//         ->where('tenant_id', $tenantId)
-//         ->where('status', 'paid')
-//         ->join('tenants', 'invoices.tenant_id', '=', 'tenants.id')
-//         ->select(
-//             'invoices.id',
-//             'invoices.user_id',
-//             'invoices.invoice_ref',
-//             'invoices.amount',
-//             'invoices.book_spot_id',
-//             'tenants.company_name'
-//         )
-//         ->first();
-
-//     if (!$invoice) {
-//         return response()->json([
-//             'error' => 'Invoice not found.'
-//         ], 404);
-//     }
-
-//     $invoice_user = User::select('first_name', 'last_name', 'email')
-//         ->find($invoice->user_id);
-
-//     if (!$invoice_user) {
-//         return response()->json([
-//             'error' => 'Invoice owner not found.'
-//         ], 404);
-//     }
-
-//     $paymentListingIds = collect($request->payment_data)
-//         ->pluck('payment_list_id')
-//         ->unique()
-//         ->values();
-
-//     $payments = PaymentListing::whereIn('id', $paymentListingIds)
-//         ->where('tenant_id', $tenantId)
-//         ->where('book_spot_id', $invoice->book_spot_id)
-//         ->get();
-
-//     if ($payments->count() !== $paymentListingIds->count()) {
-//         return response()->json([
-//             'error' => 'One or more payment listings are invalid.'
-//         ], 422);
-//     }
-
-//     $alreadyRefunded = $payments
-//         ->where('payment_status', 'refunded')
-//         ->pluck('id');
-
-//     if ($alreadyRefunded->isNotEmpty()) {
-//         return response()->json([
-//             'error' => 'Some selected payment items have already been refunded.',
-//             'payment_listing_ids' => $alreadyRefunded->values(),
-//         ], 422);
-//     }
-
-//     $refundAmount = (float) $payments->sum('fee');
-
-
-//     $payment = $payments->first();
-
-//     $refundInvoice = null;
-
-//     DB::transaction(function () use (
-//         $invoice,
-//         $paymentListingIds,
-//         $refundAmount,
-//         $tenantId,
-//         $user,
-//         &$refundInvoice
-//     ) {
-
-//         $newAmount = max(0, (float) $invoice->amount - $refundAmount);
-
-//         $invoice->update([
-//             'amount' => $newAmount,
-//             'status' => $newAmount == 0 ? 'refunded' : 'paid',
-//         ]);
-
-//         PaymentListing::whereIn('id', $paymentListingIds)
-//             ->update([
-//                 'payment_status' => 'refunded',
-//                 'updated_at' => now(),
-//             ]);
-
-//         $refundInvoice = InvoiceModel::create([
-//             'user_id' => $invoice->user_id,
-//             'amount' => $refundAmount,
-//             'book_spot_id' => $invoice->book_spot_id,
-//             'booked_by_user_id' => $user->id,
-//             'tenant_id' => $tenantId,
-//             'invoice_ref' => InvoiceModel::generateInvoiceRef(),
-//             'status' => 'refunded',
-//         ]);
-//     });
-
-//     BookSpot::where('id', $invoice->book_spot_id)->update([
-//         'fee'=>$newAmount
-//     ]);
-//     $invoice_data = array_merge(
-//         $refundInvoice->toArray(),
-//         [
-//             'customer_name' => $invoice_user->first_name . ' ' . $invoice_user->last_name,
-//             'company_name' => $invoice->company_name,
-//             'space_name' => $payment->space_name,
-//             'space_fee' => $payment->space_fee,
-//             'space_category' => $payment->space_category,
-//             'booking_type' => $payment->booking_type,
-//             'refund_amount' => $refundAmount,
-//             'refunded_items' => $payments->values()->toArray(),
-//         ]
-//     );
-
-//     Mail::to($invoice_user->email)->send(new RefundEmail($invoice_data));
-
-//     return response()->json([
-//         'success' => true,
-//         'message' => 'Invoice refunded successfully.',
-//         'refund_amount' => $refundAmount,
-//         'invoice_amount' => $invoice->fresh()->amount,
-//         'refund_invoice_ref' => $refundInvoice->invoice_ref,
-//     ], 200);
-// }
-
 
 public function modifyUpdate()
 {

@@ -232,6 +232,7 @@ Route::prefix('{tenant_slug}')->middleware(['settenant', 'throttle:api'])->group
         Route::post('/invoice/close', [InvoiceController::class, 'CloseInvoice']);
         Route::post('/invoices/modify/update', [InvoiceController::class, 'modifyUpdate']);
         Route::post('/invoice/refund', [InvoiceController::class, 'refundInvoice']);  
+        Route::get('/refunded/invoices', [InvoiceController::class, 'getRefundedInvoices']);  
          Route::post('/single/invoice/payments', [InvoiceController::class, 'getInvoicebyRef']);  
         Route::post('dynamic/invoice/create',[DynamicInvoiceController::class,'create']);
         // CRUD for prepaid user

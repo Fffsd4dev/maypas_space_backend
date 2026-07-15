@@ -48,5 +48,10 @@ public function spacePayment()
 {
     return $this->hasMany(SpacePaymentModel::class, 'invoice_ref', 'invoice_ref');
 }
-
+public function paymentData()
+{
+    // Adjust 'book_spot_id' and 'invoice_ref' based on your actual foreign keys
+    return $this->hasMany(PaymentListing::class, 'book_spot_id', 'book_spot_id')
+    ->select('space_name','space_fee','space_category', 'booking_type','payment_status', 'book_spot_id');
+}
 }
