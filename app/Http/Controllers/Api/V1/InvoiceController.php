@@ -381,6 +381,7 @@ public function getRefundedInvoices(Request $request, $slug)
    
     $tenantId =$request->user()->tenant_id;
 
+
     $invoices = InvoiceModel::with([
         'bookSpot:id,spot_id,user_id,start_time,invoice_ref,fee',
         'bookSpot.spot:id,location_id',
@@ -487,16 +488,16 @@ public function refundInvoice(Request $request, $slug)
     $tenantId = $user->tenant_id;
 
     // Only tenant owner can refund
-    if ((int) $user->user_type_id !== 1) {
-        return response()->json([
-            'error' => 'Unauthorized'
-        ], 403);
-    }
-
+   // Check if the user_type_id is NOT in the array [1, 2]
+if (!in_array((int) $user->user_type_id, [1, 2])) {
+    return response()->json([
+        'error' => 'Unauthorized'
+    ], 403);
+}
     $validator = Validator::make($request->all(), [
         'invoice_ref' => 'required|exists:invoices,invoice_ref',
         'payment_data' => 'required|array|min:1',
-        'payment_data.*.payment_listing_id' => 'required|integer|exists:payment_listings,id',
+        'payment_data.*.payment_list_id' => 'required|integer',
     ]);
 
     if ($validator->fails()) {
@@ -528,16 +529,17 @@ public function refundInvoice(Request $request, $slug)
     }
 
     $paymentListingIds = collect($request->payment_data)
-        ->pluck('payment_listing_id')
+        ->pluck('payment_list_id')
         ->unique()
         ->values();
-
+        
     $payments = PaymentListing::whereIn('id', $paymentListingIds)
         ->where('tenant_id', $tenantId)
         ->where('book_spot_id', $invoice->book_spot_id)
         ->get();
+        
 
-    if ($payments->count() !== $paymentListingIds->count()) {
+    if ($payments->count() < $paymentListingIds->count()) {
         return response()->json([
             'error' => 'One or more payment listings are invalid.'
         ], 422);
