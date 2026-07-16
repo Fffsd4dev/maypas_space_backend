@@ -507,13 +507,12 @@ public function refundInvoice(Request $request, $slug)
     $user = $request->user();
     $tenantId = $user->tenant_id;
 
-    // Only tenant owner can refund
-   // Check if the user_type_id is NOT in the array [1, 2]
-if (!in_array((int) $user->user_type_id, [1, 2])) {
-    return response()->json([
-        'error' => 'Unauthorized'
-    ], 403);
-}
+    if (!in_array((int) $user->user_type_id, [1, 2])) {
+        return response()->json([
+            'error' => 'Unauthorized'
+        ], 403);
+    }
+
     $validator = Validator::make($request->all(), [
         'invoice_ref' => 'required|exists:invoices,invoice_ref',
         'payment_data' => 'required|array|min:1',
@@ -526,84 +525,84 @@ if (!in_array((int) $user->user_type_id, [1, 2])) {
         ], 422);
     }
 
-    $invoice = InvoiceModel::where('invoice_ref', $request->invoice_ref)
-        ->where('tenant_id', $tenantId)
-        ->where('status', 'paid')
-        ->first();
-
-    if (!$invoice) {
-        return response()->json([
-            'error' => 'Invoice not found.'
-        ], 404);
-    }
-
     $tenant = Tenant::select('company_name')->find($tenantId);
-
-    $invoiceUser = User::select('first_name', 'last_name', 'email')
-        ->find($invoice->user_id);
-
-    if (!$invoiceUser) {
-        return response()->json([
-            'error' => 'Invoice owner not found.'
-        ], 404);
-    }
 
     $paymentListingIds = collect($request->payment_data)
         ->pluck('payment_list_id')
         ->unique()
         ->values();
-        
-    $payments = PaymentListing::whereIn('id', $paymentListingIds)
-        ->where('tenant_id', $tenantId)
-        ->where('book_spot_id', $invoice->book_spot_id)
-        ->get();
-        
-
-    if ($payments->count() < $paymentListingIds->count()) {
-        return response()->json([
-            'error' => 'One or more payment listings are invalid.'
-        ], 422);
-    }
-
-    $alreadyRefunded = $payments
-        ->where('payment_status', 'refunded')
-        ->pluck('id');
-
-    if ($alreadyRefunded->isNotEmpty()) {
-        return response()->json([
-            'error' => 'Some selected payment items have already been refunded.',
-            'payment_listing_ids' => $alreadyRefunded->values(),
-        ], 422);
-    }
-
-    $refundAmount = (float) $payments->sum('fee');
-    $payment = $payments->first();
 
     $refundInvoice = null;
+    $invoice = null;
+    $payments = null;
+    $payment = null;
+    $refundAmount = 0;
     $newAmount = 0;
+    $invoiceUser = null;
 
     DB::transaction(function () use (
         &$invoice,
-        $paymentListingIds,
-        $refundAmount,
-        $tenantId,
-        $user,
+        &$payments,
+        &$payment,
+        &$refundAmount,
         &$refundInvoice,
-        &$newAmount
+        &$newAmount,
+        &$invoiceUser,
+        $tenantId,
+        $paymentListingIds,
+        $request,
+        $user
     ) {
 
-        $newAmount = max(0, (float) $invoice->amount - $refundAmount);
+        // Lock invoice
+        $invoice = InvoiceModel::where('invoice_ref', $request->invoice_ref)
+            ->where('tenant_id', $tenantId)
+            ->where('status', 'paid')
+            ->lockForUpdate()
+            ->first();
+
+        if (!$invoice) {
+            throw new \Exception('Invoice not found.');
+        }
+
+        $invoiceUser = User::select('first_name', 'last_name', 'email')
+            ->find($invoice->user_id);
+
+        if (!$invoiceUser) {
+            throw new \Exception('Invoice owner not found.');
+        }
+
+        // Lock payment listings
+        $payments = PaymentListing::whereIn('id', $paymentListingIds)
+            ->where('tenant_id', $tenantId)
+            ->where('book_spot_id', $invoice->book_spot_id)
+            ->lockForUpdate()
+            ->get();
+
+        if ($payments->count() < $paymentListingIds->count()) {
+            throw new \Exception('One or more payment listings are invalid.');
+        }
+
+        // Prevent duplicate refunds
+        $alreadyRefunded = $payments
+            ->whereNotNull('refund_invoice_id');
+
+        if ($alreadyRefunded->isNotEmpty()) {
+            throw new \Exception('Some selected payment items have already been refunded.');
+        }
+
+        $refundAmount = (float) $payments->sum('fee');
+        $payment = $payments->first();
+
+        $newAmount = max(
+            0,
+            (float) $invoice->amount - $refundAmount
+        );
 
         $invoice->update([
             'amount' => $newAmount,
             'status' => $newAmount == 0 ? 'refunded' : 'paid',
         ]);
-
-        PaymentListing::whereIn('id', $paymentListingIds)
-            ->update([
-                'payment_status' => 'refunded',
-                'updated_at' => now(),
-            ]);
 
         BookSpot::where('id', $invoice->book_spot_id)->update([
             'fee' => $newAmount,
@@ -618,6 +617,18 @@ if (!in_array((int) $user->user_type_id, [1, 2])) {
             'invoice_ref' => InvoiceModel::generateInvoiceRef(),
             'status' => 'refunded',
         ]);
+
+        $updated = PaymentListing::whereIn('id', $paymentListingIds)
+            ->whereNull('refund_invoice_id')
+            ->update([
+                'payment_status'    => 'refunded',
+                'refund_invoice_id' => $refundInvoice->id,
+                'updated_at'        => now(),
+            ]);
+
+        if ($updated !== count($paymentListingIds)) {
+            throw new \Exception('One or more payment items have already been refunded.');
+        }
     });
 
     $invoice->refresh();

@@ -202,7 +202,7 @@ foreach (Charge::where('tenant_id', $tenant->tenant_id)->where('space_id', $spot
 }
 $payment_listing[] =[
     'name'=>'Space Fee',
-    'fee'=>(float)$spot_data->space_fee,
+    'fee'=>(float)$amount_booked,
 
 ];
 
