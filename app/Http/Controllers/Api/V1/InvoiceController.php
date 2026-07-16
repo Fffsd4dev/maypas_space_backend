@@ -171,14 +171,15 @@ $paymentListings = $paymentListings->get([
     'payment_status',
 ]);
 
-$payment_listing = $paymentListings->map(function ($entry) {
+$payment_listing = $paymentListings->map(function ($entry) use($invoice){
     return [
         'name'            => $entry->payment_name,
+        'space_fee'=>$entry->space_fee,
         'fee'             => $entry->fee,
         'payment_list_id' => $entry->id,
         'payment_status'  => $entry->payment_status === 'refunded'
             ? 'refunded'
-            : '',
+            : $invoice->status,
     ];
 })->values()->all();
 
@@ -722,6 +723,7 @@ public function modifyUpdate()
         }
 
         $paymentData[] = [
+            'id'=>$charge->id,
             'payment_name'       => 'Space Fee',
             'book_spot_id'       => $invoice->book_spot_id,
             'fee'                => $spaceFee,
@@ -739,7 +741,7 @@ public function modifyUpdate()
     }
 
     // Uncomment when you're ready to save
-     PaymentListing::insert($paymentData);
+     PaymentListing::upSert($paymentData);
 
     return response()->json([
         'success' => true,
