@@ -155,7 +155,7 @@ $payment_listing = [];
     $paymentListings = PaymentListing::where('tenant_id', $tenant->id)
     ->where('book_spot_id', $bookSpot->id);
     if($refund){
-        $paymentListings->where('status', '=', 'refunded');
+        $paymentListings->where('payment_status', '=', 'refunded');
     }
 
     $paymentListings->get([
