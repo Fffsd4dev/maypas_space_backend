@@ -152,33 +152,35 @@ public function show(Request $request, $slug, $id)
         ->first();
 $payment_listing = [];
 
-    $paymentListings = PaymentListing::where('tenant_id', $tenant->id)
+   $paymentListings = PaymentListing::where('tenant_id', $tenant->id)
     ->where('book_spot_id', $bookSpot->id);
-    if($refund){
-        $paymentListings->where('payment_status', '=', 'refunded');
-    }
 
-    $paymentListings->get([
-        'id',
-        'payment_name',
-        'fee',
-        'space_name',
-        'space_fee',
-        'space_category',
-        'booking_type',
-        'payment_status',
-    ]);
+if ($refund) {
+    $paymentListings->where('payment_status', 'refunded');
+}
 
-$payment_listing = $paymentListings
-    ->map(fn ($entry) => [
+// Execute the query and store the Collection
+$paymentListings = $paymentListings->get([
+    'id',
+    'payment_name',
+    'fee',
+    'space_name',
+    'space_fee',
+    'space_category',
+    'booking_type',
+    'payment_status',
+]);
+
+$payment_listing = $paymentListings->map(function ($entry) {
+    return [
         'name'            => $entry->payment_name,
         'fee'             => $entry->fee,
         'payment_list_id' => $entry->id,
-       'payment_status' => $entry->payment_status === 'refunded'
-    ? 'refunded'
-    : '',
-    ])
-    ->all();
+        'payment_status'  => $entry->payment_status === 'refunded'
+            ? 'refunded'
+            : '',
+    ];
+})->values()->all();
 
 $spaceFee = $paymentListings->firstWhere('payment_name', 'Space Fee');
 
