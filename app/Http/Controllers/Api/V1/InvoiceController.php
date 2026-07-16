@@ -136,6 +136,7 @@ public function show(Request $request, $slug, $id)
     ->join('categories', 'categories.id', '=', 'spaces.space_category_id')
     ->join('floors', 'floors.id', '=', 'spaces.floor_id')  // assuming floor relation is on space
     ->first();
+    
 
     if (!$space_info) {
         return response()->json(['error' => 'Space information not found'], 404);
@@ -159,6 +160,7 @@ if ($refund) {
     $paymentListings->where('payment_status', 'refunded');
 }
 
+
 // Execute the query and store the Collection
 $paymentListings = $paymentListings->get([
     'id',
@@ -170,27 +172,26 @@ $paymentListings = $paymentListings->get([
     'booking_type',
     'payment_status',
 ]);
+$space_data = $paymentListings->select('space_name', 'space_fee', 'space_category', 'booking_type')->first();
 
 $payment_listing = $paymentListings->map(function ($entry) use($invoice){
     return [
         'name'            => $entry->payment_name,
-        'space_fee'=>$entry->space_fee,
-        'fee'             => $entry->fee,
+        'refunded_fee'             => $entry->fee,
         'payment_list_id' => $entry->id,
         'payment_status'  => $entry->payment_status === 'refunded'
             ? 'refunded'
             : $invoice->status,
     ];
 })->values()->all();
+$space_info ->space_name =$space_data['space_name'];
+$space_info->space_fee =$space_data['space_fee'];
+$space_info->space_category =$space_data['space_category'];
+$space_info->booking_type =$space_data['booking_type'];
 
-$spaceFee = $paymentListings->firstWhere('payment_name', 'Space Fee');
 
-if ($spaceFee) {
-    $space_info->space_fee      = $spaceFee->space_fee;
-    $space_info->space_name     = $spaceFee->space_name;
-    $space_info->space_category = $spaceFee->space_category;
-    $space_info->booking_type   = $spaceFee->booking_type;
-}
+
+
     
     // ───────────────────────────────────────────────────────────────
     // Apply timezone corrections (in-place, no structure change)
