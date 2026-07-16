@@ -182,7 +182,11 @@ foreach (TaxModel::where('tenant_id', $tenant->tenant_id)->get() as $tax) {
     }
 }
 
+$payment_listing[] =[
+    'charge_name'=>'Space Fee',
+    'fee'=>(float)$amount_booked,
 
+];
 // VAT on main booking
 $vatRate = $vat ? ($vat['percentage'] / 100) : 0;
 
@@ -354,8 +358,12 @@ ReservedSpots::insert($reservedSpotsData);
         // Generate Schedule
         $schedule = $this->generateSchedule($chosenDays, Carbon::parse($expiryDay));
         $payment_rows =collect($payment_listing)->map(fn($item) => [
-            'payment_name'       => $item['charge_name'],
+             'payment_name'       => $item['charge_name'],
             'fee'                => $item['unit_amount'],
+            'booking_type'      =>$spot_data->booking_type,
+            'space_category'    =>$spot_data->space_category,
+            'space_fee'         =>$spot_data->space_fee,
+            'space_name'        =>$spot_data->space_name,
             'book_spot_id'       => $bookSpot->id,
             'tenant_id'          => $tenant->tenant_id,
             'payment_by_user_id' => $validated['user_id'],
@@ -363,6 +371,7 @@ ReservedSpots::insert($reservedSpotsData);
             'created_at'         => now(),
             'updated_at'         => now(),
             ])->toArray();
+
 
 PaymentListing::insert($payment_rows);
 
