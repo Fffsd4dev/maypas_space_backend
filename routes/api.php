@@ -230,7 +230,9 @@ Route::prefix('{tenant_slug}')->middleware(['settenant', 'throttle:api'])->group
         Route::post('/invoice/update/{id}', [InvoiceController::class, 'update']);
         Route::post('/invoice/delete', [InvoiceController::class, 'destroy']);
         Route::post('/invoice/close', [InvoiceController::class, 'CloseInvoice']);
-        Route::post('/invoices/modify/update', [InvoiceController::class, 'modifyUpdate']);
+        //Route::post('/invoices/modify/update', [InvoiceController::class, 'modifyUpdate']);
+        //fixPaymentData
+         Route::get('/invoices/fix/payments', [InvoiceController::class, 'fixPaymentData']);
         Route::post('/invoice/refund', [InvoiceController::class, 'refundInvoice']);  
         Route::get('/refunded/invoices', [InvoiceController::class, 'getRefundedInvoices']);  
          Route::post('/single/invoice/payments', [InvoiceController::class, 'getInvoicebyRef']);  

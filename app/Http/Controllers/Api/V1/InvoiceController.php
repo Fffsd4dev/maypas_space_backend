@@ -73,7 +73,7 @@ $invoices = InvoiceModel::with([
 ])
 ->where('tenant_id', $tenant_id)->where('status', '!=', 'refunded')
 ->whereNotNull('invoice_ref')
-->select('id','book_spot_id', 'user_id', 'invoice_ref', 'tenant_id')
+->select('id','amount','book_spot_id', 'user_id', 'invoice_ref', 'tenant_id')
 ->get();
 
 
@@ -115,6 +115,7 @@ public function show(Request $request, $slug, $id)
     if (!$invoice) {
         return response()->json(['error' => 'Invoice not found'], 404);
     }
+  $refund = $invoice->status === 'refunded';
 
     $bookSpot = optional($invoice->bookSpot);
 
@@ -152,8 +153,12 @@ public function show(Request $request, $slug, $id)
 $payment_listing = [];
 
     $paymentListings = PaymentListing::where('tenant_id', $tenant->id)
-    ->where('book_spot_id', $bookSpot->id)
-    ->get([
+    ->where('book_spot_id', $bookSpot->id);
+    if($refund){
+        $paymentListings->where('status', '=', 'refunded');
+    }
+
+    $paymentListings->get([
         'id',
         'payment_name',
         'fee',
@@ -386,13 +391,26 @@ public function getRefundedInvoices(Request $request, $slug)
         'bookSpot:id,spot_id,user_id,start_time,invoice_ref,fee',
         'bookSpot.spot:id,location_id',
         'user:id,first_name,last_name',
-        'paymentData' // Eager load the relationship directly
+        'paymentData' => function ($query) {
+            $query->where('payment_status', 'refunded');
+        }
     ])
+    ->whereHas('paymentData', function ($query) {
+        $query->where('payment_status', 'refunded');
+    })
     ->where('tenant_id', $tenantId)
     ->where('status', 'refunded')
     ->whereNotNull('invoice_ref')
-    ->select('id', 'book_spot_id', 'user_id', 'invoice_ref', 'tenant_id', 'created_at')
-    ->orderBy('created_at', 'desc')
+    ->select([
+        'id',
+        'book_spot_id',
+        'amount',
+        'user_id',
+        'invoice_ref',
+        'tenant_id',
+        'created_at'
+    ])
+    ->orderByDesc('created_at')
     ->get();
 
     if ($invoices->isEmpty()) {
@@ -730,25 +748,43 @@ public function getInvoicebyRef(Request $request)
     }
 
     $tenantId = $request->user()->tenant_id;
+    $invoice = InvoiceModel::select([
+        'id',
+        'invoice_ref',
+        'book_spot_id',
+        'tenant_id',
+        'user_id',
+        'amount',
+        'status',
+        'created_at',
+    ])
+    ->where('tenant_id', $tenantId)
+    ->where('invoice_ref', $request->invoice_ref)
+    ->first();
 
-    $invoice = InvoiceModel::with([
-            'bookSpot:id,user_id,spot_id,fee,chosen_days,expiry_day',
-            'bookSpot.user:id,first_name,last_name,email',
-            'bookSpot.paymentlisting:id,book_spot_id,payment_name,fee,payment_by_user_id,payment_status,payment_completed'
-        ])
-        ->select([
+if (!$invoice) {
+    return response()->json(['message' => 'Invoice not found'], 404);
+}
+
+$invoice->load([
+    'bookSpot:id,user_id,spot_id,fee,chosen_days,expiry_day',
+    'bookSpot.user:id,first_name,last_name,email',
+    'bookSpot.paymentlisting' => function ($query) use ($invoice) {
+        $query->select([
             'id',
-            'invoice_ref',
             'book_spot_id',
-            'tenant_id',
-            'user_id',
-            'amount',
-            'status',
-            'created_at',
-        ])
-        ->where('tenant_id', $tenantId)
-        ->where('invoice_ref', $request->invoice_ref)
-        ->first();
+            'payment_name',
+            'fee',
+            'payment_by_user_id',
+            'payment_status',
+            'payment_completed',
+        ]);
+
+        if ($invoice->status === 'refunded') {
+            $query->where('payment_status', 'refunded');
+        }
+    },
+]);
 
     if (!$invoice) {
         return response()->json([
@@ -769,4 +805,33 @@ if ($invoice->bookSpot) {
         'data' => $invoice,
     ], 200);
 }
+public function fixPaymentData(){
+    $updated = DB::update("
+    UPDATE payment_listings pl
+    INNER JOIN book_spots bs
+        ON bs.id = pl.book_spot_id
+    INNER JOIN spots s
+        ON s.id = bs.spot_id
+    INNER JOIN spaces sp
+        ON sp.id = s.space_id
+    INNER JOIN categories c
+        ON c.id = sp.space_category_id
+    SET
+        pl.space_name = COALESCE(pl.space_name, sp.space_name),
+        pl.space_fee = COALESCE(pl.space_fee, sp.space_fee),
+        pl.space_category = COALESCE(pl.space_category, c.category),
+        pl.booking_type = COALESCE(pl.booking_type, c.booking_type)
+    WHERE
+        pl.space_name IS NULL
+        OR pl.space_fee IS NULL
+        OR pl.space_category IS NULL
+        OR pl.booking_type IS NULL
+");
+    
+  return response()->json([
+        'success' => true,
+        'message' => 'Payment listings synchronized successfully.'
+    ]);
+}
+
 }
