@@ -363,9 +363,10 @@ $space_info->booking_type =$space_data['booking_type'];
 }
 
     
-    public function cancelInvoice($book_spot_id, $slug)
+    public function cancelInvoice(Request $request, $book_spot_id)
     {
-        $tenant = Tenant::where('slug', $slug)->first();
+           $tenant_id = $request->user()->tenant_id;
+        $tenant = Tenant::where('id', $tenant_id)->first();
         $data = InvoiceModel::where('book_spot_id', $book_spot_id)->where('tenant_id', $tenant->id)->first();
         $space_payment_model = SpacePaymentModel::where('invoice_ref',$data['invoice_ref'])->where('tenant_id', $tenant->id)->update(['payment_status'=>'cancelled']);
 

@@ -146,7 +146,7 @@ if (!$tenant) {
         $spot_data = Spot::where('spots.id', $validated['spot_id'])
     ->join('spaces', 'spaces.id', '=', 'spots.space_id')->join('categories', 'spaces.space_category_id', 'categories.id')
     ->select('spots.*', 'spaces.space_name as space_name', 'spaces.space_category_id', 'spaces.space_fee', 'spaces.min_space_discount_time', 
-    'spaces.space_discount', 'categories.id as space_category_id', 'categories.booking_type as booking_type', 'categories.min_duration as category_min_duration') // adjust as needed
+    'spaces.space_discount', 'categories.id as space_category_id', 'categories.category','categories.booking_type as booking_type', 'categories.min_duration as category_min_duration') // adjust as needed
     ->first(); 
 
         
@@ -184,7 +184,7 @@ foreach (TaxModel::where('tenant_id', $tenant->tenant_id)->get() as $tax) {
 
 $payment_listing[] =[
     'charge_name'=>'Space Fee',
-    'fee'=>(float)$amount_booked,
+    'unit_amount'=>(float)$amount_booked,
 
 ];
 // VAT on main booking
@@ -357,11 +357,12 @@ ReservedSpots::insert($reservedSpotsData);
         $chosenDays = json_decode($bookSpot->chosen_days, true);
         // Generate Schedule
         $schedule = $this->generateSchedule($chosenDays, Carbon::parse($expiryDay));
+    
         $payment_rows =collect($payment_listing)->map(fn($item) => [
              'payment_name'       => $item['charge_name'],
             'fee'                => $item['unit_amount'],
             'booking_type'      =>$spot_data->booking_type,
-            'space_category'    =>$spot_data->space_category,
+            'space_category'    =>$spot_data->category,
             'space_fee'         =>$spot_data->space_fee,
             'space_name'        =>$spot_data->space_name,
             'book_spot_id'       => $bookSpot->id,
@@ -415,17 +416,7 @@ PaymentListing::insert($payment_rows);
 
 private function validateBookingRequest(Request $request)
 {
-
-        $validator = Validator::make($request->all(), [
-        'item_name'           => 'required|array',
-        'item_name.*'         => 'required|string',
-
-        'item_charge'         => 'required|array',
-        'item_charge.*'       => 'required|numeric',
-
-        'item_number'         => 'required|array',
-        'item_number.*'       => 'required|integer',
-
+    $validator = Validator::make($request->all(), [
         'spot_id'             => 'required|numeric|exists:spots,id',
         'user_id'             => 'required|numeric|exists:users,id',
 
@@ -435,26 +426,82 @@ private function validateBookingRequest(Request $request)
 
         'book_spot_id'        => 'nullable|numeric|min:0',
 
-        'chosen_days'         => 'required|array',
-        'chosen_days.*.day'   => 'required|string|in:sunday,monday,tuesday,wednesday,thursday,friday,saturday',
-        'chosen_days.*.start_time' => 'required|date_format:Y-m-d H:i:s|after_or_equal:now',
-        'chosen_days.*.end_time'   => 'required|date_format:Y-m-d H:i:s',
+        'chosen_days'         => 'required|array|min:1',
+
+        'chosen_days.*.day'         => 'required|string|in:sunday,monday,tuesday,wednesday,thursday,friday,saturday',
+        'chosen_days.*.start_time'  => 'required|date_format:Y-m-d H:i:s|after_or_equal:now',
+        'chosen_days.*.end_time'    => 'required|date_format:Y-m-d H:i:s',
+
+        'item_name'           => 'nullable|array',
+        'item_name.*'         => 'required_with:item_name|string',
+
+        'item_charge'         => 'nullable|array',
+        'item_charge.*'       => 'required_with:item_charge|numeric|min:0',
+
+        'item_number'         => 'nullable|array',
+        'item_number.*'       => 'required_with:item_number|integer|min:1',
     ]);
 
-    // Custom validation for end_time > start_time
     $validator->after(function ($validator) use ($request) {
-        if ($request->has('chosen_days')) {
-            foreach ($request->chosen_days as $index => $day) {
-                if (
-                    isset($day['start_time'], $day['end_time']) &&
-                    strtotime($day['end_time']) <= strtotime($day['start_time'])
-                ) {
-                    $validator->errors()->add(
-                        "chosen_days.$index.end_time",
-                        'End time must be after start time.'
-                    );
-                }
+
+        foreach ($request->input('chosen_days', []) as $index => $chosenDay) {
+
+            if (
+                !isset($chosenDay['start_time'], $chosenDay['end_time'], $chosenDay['day'])
+            ) {
+                continue;
             }
+
+            $start = Carbon::parse($chosenDay['start_time']);
+            $end   = Carbon::parse($chosenDay['end_time']);
+
+            // Start and end must be on the same date
+            if (!$start->isSameDay($end)) {
+                $validator->errors()->add(
+                    "chosen_days.$index.end_time",
+                    'Start time and end time must be on the same day.'
+                );
+            }
+
+            // End must be after start
+            if ($end->lessThanOrEqualTo($start)) {
+                $validator->errors()->add(
+                    "chosen_days.$index.end_time",
+                    'End time must be later than the start time.'
+                );
+            }
+
+            // Selected weekday must match the dates
+            $selectedDay = strtolower($chosenDay['day']);
+
+            if (strtolower($start->format('l')) !== $selectedDay) {
+                $validator->errors()->add(
+                    "chosen_days.$index.day",
+                    'The selected day does not match the start time.'
+                );
+            }
+
+            if (strtolower($end->format('l')) !== $selectedDay) {
+                $validator->errors()->add(
+                    "chosen_days.$index.day",
+                    'The selected day does not match the end time.'
+                );
+            }
+        }
+
+        // Validate extras arrays are the same length
+        $names    = $request->input('item_name', []);
+        $charges  = $request->input('item_charge', []);
+        $numbers  = $request->input('item_number', []);
+
+        if (
+            count($names) !== count($charges) ||
+            count($names) !== count($numbers)
+        ) {
+            $validator->errors()->add(
+                'item_name',
+                'Item name, charge and quantity arrays must contain the same number of items.'
+            );
         }
     });
 
