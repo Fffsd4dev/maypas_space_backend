@@ -1042,40 +1042,80 @@ public function update(Request $request, $slug)
 }
 
     // Cancel an existing booking
-    public function cancelBooking(Request $request)
-    {
-    
-        $validator = Validator::make($request->all(), [
-            'book_spot_id' => 'required|numeric|exists:book_spots,id',
-        ]);
+public function cancelBooking(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'book_spot_id' => 'required|integer|min:1',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 422);
-        }
+    if ($validator->fails()) {
+        return response()->json([
+            'error' => $validator->errors()
+        ], 422);
+    }
 
-        $userId = Auth::id();
+    $user = $request->user();
+    $userId = $user->id;
+    $tenantId = $user->tenant_id;
+    $bookSpotId = (int) $request->book_spot_id;
 
-        $booking = BookSpot::where('id', $request->book_spot_id)
-            ->where(function ($query) use ($userId) {
-                $query->where('booked_by_user', $userId)
-                      ->orWhere('user_id', $userId);
-            })
-            ->with('spot')
-            ->firstOrFail();
-            $reservedSpots = ReservedSpots::where('booked_spot_id', $booking->id)->get();
+    try {
 
-        DB::transaction(function () use ($booking,$reservedSpots) {
+        DB::transaction(function () use ($request, $userId, $tenantId, $bookSpotId) {
+
+            // Cancel invoice first.
+            // This should NOT depend on BookSpot existing.
+            (new InvoiceController())->cancelInvoice($request, $bookSpotId);
+
+            // Mark payment as not completed (safe even if no rows exist)
+            PaymentListing::where('book_spot_id', $bookSpotId)
+                ->update([
+                    'payment_completed' => false,
+                ]);
+
+            // Attempt to retrieve the booking.
+            // If it no longer exists, continue gracefully.
+            $booking = BookSpot::where('id', $bookSpotId)
+                ->where(function ($query) use ($userId, $tenantId) {
+                    $query->where('booked_by_user', $userId)
+                        ->orWhere('user_id', $userId)
+                        ->orWhere('tenant_id', $tenantId);
+                })
+                ->lockForUpdate()
+                ->first();
+
+            if (!$booking) {
+                // Booking was already deleted (e.g. previous glitch).
+                // Remove any orphan reserved spots and exit.
+                ReservedSpots::where('booked_spot_id', $bookSpotId)->delete();
+                return;
+            }
+
+            // Delete reserved spots if they still exist.
+            ReservedSpots::where('booked_spot_id', $bookSpotId)->delete();
+
+            // Delete booking.
             $booking->delete();
-            $reservedSpots->each(function ($reservedSpot) {
-                $reservedSpot->delete();
-            });
         });
 
-        $invoiceCont =new InvoiceController();
-        $invoiceCont-> cancelInvoice($booking->id);
-        PaymentListing::where('book_spot_id',$booking->id)->update(['payment_completed'=>false]);
-        return response()->json(['message' => 'Booking successfully canceled'], 200);
-    }
+        return response()->json([
+            'message' => 'Booking successfully canceled.'
+        ], 200);
+
+  catch (\Throwable $e) {
+
+    Log::error('Failed to cancel booking.', [
+        'book_spot_id' => $bookSpotId,
+        'user_id'      => $userId,
+        'tenant_id'    => $tenantId,
+        'exception'    => $e,
+    ]);
+
+    return response()->json([
+        'error' => 'Unable to cancel booking. Please try again later.'
+    ], 500);
+}
+}
 
   
 
