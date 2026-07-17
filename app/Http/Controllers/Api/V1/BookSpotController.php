@@ -1041,7 +1041,6 @@ public function update(Request $request, $slug)
     }
 }
 
-    // Cancel an existing booking
 public function cancelBooking(Request $request)
 {
     $validator = Validator::make($request->all(), [
@@ -1102,7 +1101,7 @@ public function cancelBooking(Request $request)
             'message' => 'Booking successfully canceled.'
         ], 200);
 
-  catch (\Throwable $e) {
+    } catch (\Throwable $e) {
 
     Log::error('Failed to cancel booking.', [
         'book_spot_id' => $bookSpotId,
