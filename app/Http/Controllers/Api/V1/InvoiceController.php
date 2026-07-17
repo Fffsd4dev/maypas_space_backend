@@ -811,6 +811,9 @@ $invoice->load([
     }
 if ($invoice->bookSpot) {
     foreach ($invoice->bookSpot->paymentlisting as $payment) {
+     if ($payment->payment_status !== 'refunded') {
+    $payment->payment_status = $invoice->status;
+}
         $payment->payment_status = $payment->payment_status;
         $payment->payment_completed = $invoice->status === 'paid';
     }
