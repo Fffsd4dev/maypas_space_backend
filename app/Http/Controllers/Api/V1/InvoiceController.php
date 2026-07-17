@@ -153,16 +153,22 @@ public function show(Request $request, $slug, $id)
         ->first();
 $payment_listing = [];
 
-   $paymentListings = PaymentListing::where('tenant_id', $tenant->id)
+  $query = PaymentListing::where('tenant_id', $tenant->id)
     ->where('book_spot_id', $bookSpot->id);
 
 if ($refund) {
-    $paymentListings->where('payment_status', 'refunded');
+    $hasRefundPayments = (clone $query)
+        ->where('invoice_refund_id', $invoice->id)
+        ->exists();
+
+    if ($hasRefundPayments) {
+        $query->where('invoice_refund_id', $invoice->id);
+    } else {
+        $query->where('payment_status', 'refunded');
+    }
 }
 
-
-// Execute the query and store the Collection
-$paymentListings = $paymentListings->get([
+$paymentListings = $query->get([
     'id',
     'payment_name',
     'fee',
@@ -170,6 +176,7 @@ $paymentListings = $paymentListings->get([
     'space_fee',
     'space_category',
     'booking_type',
+    'invoice_refund_id',
     'payment_status',
 ]);
 $space_data = $paymentListings->select('space_name', 'space_fee', 'space_category', 'booking_type')->first();
