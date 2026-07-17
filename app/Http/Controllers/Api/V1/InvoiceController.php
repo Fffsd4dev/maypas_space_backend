@@ -158,7 +158,7 @@ $payment_listing = [];
 
 if ($refund) {
     $hasRefundPayments = (clone $query)
-        ->where('invoice_refund_id', $invoice->id)
+        ->where('refund_invoice_id', $invoice->id)
         ->exists();
 
     if ($hasRefundPayments) {
