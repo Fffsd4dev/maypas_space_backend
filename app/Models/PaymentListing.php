@@ -20,6 +20,7 @@ class PaymentListing extends Model
         'book_spot_id',
         'tenant_id',
         'payment_by_user_id',
+        'refund_invoice_id',
         'payment_completed',
     ];
 
