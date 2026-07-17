@@ -162,7 +162,7 @@ if ($refund) {
         ->exists();
 
     if ($hasRefundPayments) {
-        $query->where('invoice_refund_id', $invoice->id);
+        $query->where('refund_invoice_id', $invoice->id);
     } else {
         $query->where('payment_status', 'refunded');
     }
@@ -176,7 +176,7 @@ $paymentListings = $query->get([
     'space_fee',
     'space_category',
     'booking_type',
-    'invoice_refund_id',
+    'refund_invoice_id',
     'payment_status',
 ]);
 $space_data = $paymentListings->select('space_name', 'space_fee', 'space_category', 'booking_type')->first();
