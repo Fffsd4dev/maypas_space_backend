@@ -350,10 +350,20 @@ class AnalyticsController extends Controller
                             ->where('expiry_day', '>', $filterEndDate);
                 });
         })
+
+        ->whereHas('invoice', function ($query) {
+            $query->where('status', 'paid');   // ← adjust column/value to match your invoices table
+        })
         ->with([
-            'invoice'
+            // Constrain the eager-loaded invoice to paid only as well,
+            // so $result->invoice is never an unpaid record
+            'invoice' => fn ($q) => $q->where('status', 'paid'),
         ])
         ->get();
+        // ->with([
+        //     'invoice'
+        // ])
+        // ->get();
 
         return $results;
     }
